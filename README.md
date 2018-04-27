@@ -57,6 +57,8 @@ In small step evaluation, I only implemented valid path, because implemented exc
 
 Both implementation is the same, and you can the example of reduction in the slides I provide at beginning.
 
+The whole implementation is at [PDL.agda]('./PDL.agda')
+
 ## Extend language with properities
 
 Now, I finish our language but it is not so interesting, so I try to add more thing into my language.
@@ -94,3 +96,5 @@ It says :
 In rule parent: if you give me premises x and y, then I will return a conclusion x is the parent of y.
 In rule male: if you give me a premise z, then I will return a conclusion z is male.
 In rule B: if your give me premise that "x is the parent of y" and "x is a male", then I will return a conclusion that "x is the father of y."
+
+The whole implementation is at [PDL2.agda]('./PDL2.agda')
