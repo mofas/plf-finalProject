@@ -98,6 +98,60 @@ ctx1 : RuleCtx
 ctx1 = (ruleD , (ruleC , (ruleB , (ruleA , □))))
 
 
+-- Type
+
+
+data Typ : Set where
+  Valid    : Typ
+
+LengthPremisesExp : PremiseExp → ℕ
+LengthPremisesExp □ = zero
+LengthPremisesExp (x , exp) = suc (LengthPremisesExp exp)
+
+LengthPremisesSet : PremiseSet → ℕ
+LengthPremisesSet □ = zero
+LengthPremisesSet (x , exp) = suc (LengthPremisesSet exp)
+
+
+data _Set⊢_Set::_ : RuleCtx → PremiseExp → Typ → Set
+
+data _App⊢_App::_ : RuleCtx → Exp → Typ → Set where  
+  AppT : ∀ {require premises x c ctx} →
+    ctx Set⊢ premises Set:: Valid →
+    (require ⊢ x ∷ c) ∈ ctx → 
+    (LengthPremisesSet require) ≤ (LengthPremisesExp premises) → 
+    ctx App⊢ (App premises (Var x)) App:: Valid
+  
+data _Set⊢_Set::_ where
+  EmptyT  : ∀ {ctx} → ctx Set⊢ □ Set:: Valid
+  
+  ExtendStrT : ∀ {set ctx} {s : String} → ctx Set⊢ set Set:: Valid →
+    ctx Set⊢ (inj₁ s , set) Set:: Valid
+    
+  ExtendExpT : ∀ {e set ctx} → ctx App⊢ e App:: Valid → ctx Set⊢ set Set:: Valid →
+    ctx Set⊢ (inj₂ e , set) Set:: Valid 
+
+
+expSetABT : ctx1 Set⊢ (inj₁ "b" , ( inj₁ "a" , □)) Set:: Valid
+expSetABT =  ExtendStrT (ExtendStrT EmptyT)
+
+LengthAB≤ : (LengthPremisesSet ( "b" , ("a" , □))) ≤ (LengthPremisesExp (inj₁ "b" , ( inj₁ "a" , □)))
+LengthAB≤ = s≤s (s≤s z≤n)
+
+expABT : ctx1 App⊢ (App (inj₁ "b" , ( inj₁ "a" , □)) (Var "A")) App:: Valid
+expABT = (AppT expSetABT ruleA∈ctx1 LengthAB≤)
+
+expACT : ctx1 App⊢ (App (inj₁ "c" , ( inj₁ "a" , □)) (Var "B")) App:: Valid
+expACT = (AppT (ExtendStrT (ExtendStrT EmptyT)) ruleB∈ctx1 (s≤s (s≤s z≤n)))
+
+expBCT : ctx1 App⊢ (App (inj₁ "c" , ( inj₁ "b" , □)) (Var "C")) App:: Valid
+expBCT = (AppT (ExtendStrT (ExtendStrT EmptyT)) ruleC∈ctx1 (s≤s (s≤s z≤n)))
+
+exp4T : ctx1 App⊢ (App (inj₂ exp3 , (inj₂ exp2 , ( inj₂ exp1 , □))) (Var "D")) App:: Valid
+exp4T = (AppT (ExtendExpT expBCT (ExtendExpT expACT (ExtendExpT expABT EmptyT))) ruleD∈ctx1 (s≤s (s≤s (s≤s z≤n))))
+
+
+
 
 
 
@@ -321,57 +375,4 @@ setN⊆setN = keep stop
 evalE2 : Eval exp5 ctx2 "o"
 evalE2 = AppE • EvalPreExp • EvalPreK • EvalPreS • EvalPreExpK • AppE • EvalPreStr • EvalPreK • EvalPreS • EvalPreStrK • (AppK ruleE∈ctx2) • (AppS setM⊆setM) • EvalPreExpS • (AppK ruleF∈ctx2) • (AppS setN⊆setN) • ∎ 
 
-
-
--- Type
-
-
-data Typ : Set where
-  Valid    : Typ
-
-LengthPremisesExp : PremiseExp → ℕ
-LengthPremisesExp □ = zero
-LengthPremisesExp (x , exp) = suc (LengthPremisesExp exp)
-
-LengthPremisesSet : PremiseSet → ℕ
-LengthPremisesSet □ = zero
-LengthPremisesSet (x , exp) = suc (LengthPremisesSet exp)
-
-
-data _Set⊢_Set::_ : RuleCtx → PremiseExp → Typ → Set
-
-data _App⊢_App::_ : RuleCtx → Exp → Typ → Set where  
-  AppT : ∀ {require premises x c ctx} →
-    ctx Set⊢ premises Set:: Valid →
-    (require ⊢ x ∷ c) ∈ ctx → 
-    (LengthPremisesSet require) ≤ (LengthPremisesExp premises) → 
-    ctx App⊢ (App premises (Var x)) App:: Valid
-  
-data _Set⊢_Set::_ where
-  EmptyT  : ∀ {ctx} → ctx Set⊢ □ Set:: Valid
-  
-  ExtendStrT : ∀ {set ctx} {s : String} → ctx Set⊢ set Set:: Valid →
-    ctx Set⊢ (inj₁ s , set) Set:: Valid
-    
-  ExtendExpT : ∀ {e set ctx} → ctx App⊢ e App:: Valid → ctx Set⊢ set Set:: Valid →
-    ctx Set⊢ (inj₂ e , set) Set:: Valid 
-
-
-expSetABT : ctx1 Set⊢ (inj₁ "b" , ( inj₁ "a" , □)) Set:: Valid
-expSetABT =  ExtendStrT (ExtendStrT EmptyT)
-
-LengthAB≤ : (LengthPremisesSet ( "b" , ("a" , □))) ≤ (LengthPremisesExp (inj₁ "b" , ( inj₁ "a" , □)))
-LengthAB≤ = s≤s (s≤s z≤n)
-
-expABT : ctx1 App⊢ (App (inj₁ "b" , ( inj₁ "a" , □)) (Var "A")) App:: Valid
-expABT = (AppT expSetABT ruleA∈ctx1 LengthAB≤)
-
-expACT : ctx1 App⊢ (App (inj₁ "c" , ( inj₁ "a" , □)) (Var "B")) App:: Valid
-expACT = (AppT (ExtendStrT (ExtendStrT EmptyT)) ruleB∈ctx1 (s≤s (s≤s z≤n)))
-
-expBCT : ctx1 App⊢ (App (inj₁ "c" , ( inj₁ "b" , □)) (Var "C")) App:: Valid
-expBCT = (AppT (ExtendStrT (ExtendStrT EmptyT)) ruleC∈ctx1 (s≤s (s≤s z≤n)))
-
-exp4T : ctx1 App⊢ (App (inj₂ exp3 , (inj₂ exp2 , ( inj₂ exp1 , □))) (Var "D")) App:: Valid
-exp4T = (AppT (ExtendExpT expBCT (ExtendExpT expACT (ExtendExpT expABT EmptyT))) ruleD∈ctx1 (s≤s (s≤s (s≤s z≤n))))
 
