@@ -76,25 +76,54 @@ It means "For a given X, X is mortal if X is human." In our language, we don't h
 ```
 Rule mortal : ([x] -> ("mortal" x))
 Rule human : ([x] -> ("human" x))
-Rule A:  ([("human" x)] -> ("mortal" x))
+Rule humanIsMortal:  ([("human" x)] -> ("mortal" x))
 ```
 
 In rule human: if you give me a premise x, then I will return a conclusion x is human.
 In rule a: if you give me a premise x is human, then I will return a conclusion x is mortal.
 
-That is to say, now conclusions or premises can have properties attached on them. Let us see another complex example.
+That is to say, now conclusions or premises can have properties attached to them.
+
+Let us see another complex example.
 
 ```
 Rule parent : ([x y] -> ("parent" x y))
 Rule male : ([z] -> ("male" z))
-Rule B:  ([("parent" x y) ("male" x)] -> ("father" x y))
+Rule father:  ([("parent" x y) ("male" x)] -> ("father" x y))
 ```
 
-Now you can see the property "parent" could have two premises inside.
-It says :
+Now you can see the property "parent" could have two premises inside. It says :
 
 In rule parent: if you give me premises x and y, then I will return a conclusion x is the parent of y.
 In rule male: if you give me a premise z, then I will return a conclusion z is male.
 In rule B: if your give me premise that "x is the parent of y" and "x is a male", then I will return a conclusion that "x is the father of y."
+
+Now we can create an expression
+
+```
+parent("Vader", "Luke")
+male("Vader")
+father(x, "Luke")
+```
+
+It should return (`x = "Vader"`) in the ends.
+
+However, execute such expressions will need unification, and that is hard to implement.
+Therefore, we constraint our expression a little bit.
+
+```
+([parent("Vader", "Luke") male("Vader")] -> ((fresh x), "Luke"))
+```
+
+The following is another example
+
+```
+Rule parent : ([x y] -> ("parent" x y))
+Rule grandparent :  ([("parent" x y) ("parent" y z)] -> ("grandparent" x z))
+
+([parent("John", "Mose") parent("Mose", "Inca")] -> ((fresh x), (fresh z)))
+```
+
+It should return (`x=John`, `z=Inca`)
 
 The whole implementation is at [PDL2.agda](./PDL2.agda)
