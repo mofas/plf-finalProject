@@ -112,7 +112,14 @@ However, execute such expressions will need unification, and that is hard to imp
 Therefore, we constraint our expression a little bit to let only return boolean in the end.
 
 ```
-([parent("Vader", "Luke") male("Vader")] -> father("Vader", "Luke"))
+(
+  [
+    ["Vader" "Luke"] -> parent("Vader", "Luke")
+    ["Vader"] -> male("Vader")
+  ]
+  ->
+  father("Vader", "Luke")
+)
 ```
 
 The following is another example
@@ -121,7 +128,14 @@ The following is another example
 Rule parent : ([x y] -> ("parent" x y))
 Rule grandparent :  ([("parent" x y) ("parent" y z)] -> ("grandparent" x z))
 
-([parent("John", "Mose") parent("Mose", "Inca")] -> grandparent("Ada", "Inca")
+(
+  [
+    ["John", "Mose"] -> parent("John", "Mose")
+    ["Mose", "Inca"] -> parent("Mose", "Inca")
+  ]
+  ->
+  grandparent("Ada", "Inca")
+)
 ```
 
 It should return false
