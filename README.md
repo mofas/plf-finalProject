@@ -43,7 +43,7 @@ exp1 = (App
 
 ## Type System
 
-For all valid expressions, it has only one conclusion to return in the end. Therefore, it has only one type. However, we can also take the type system as a static check, to rule out some "invalid" expression.
+For all valid expressions, it has only one conclusion to return in the end. Therefore, it has only one type. However, we can also take the type system as a static check, to rule out some "invalid" expressions.
 
 In my type system, I have only one type that call "valid" in type system. An expression need to satisify certain conditions to meet the "valid" type. For example, the number of the premises in "App" expression should be larger than that required by the rule.
 
@@ -61,7 +61,7 @@ The whole implementation is at [PDL.agda](./PDL.agda)
 
 ## Extend language with properities
 
-Now, I finish our language but it is not so interesting, so I try to add more thing into my language.
+Now, I finish a language but it is not so interesting. Therefore, I try to add more thing into this language.
 
 There are many other languages have similar derivation system like I did here, and they are more sophisticated and powerful. Prolog is a good example, it is a logic language which have a rule and unification system to solve logic complex relation.
 
@@ -109,10 +109,10 @@ father(x, "Luke")
 It should return (`x = "Vader"`) in the ends.
 
 However, execute such expressions will need unification, and that is hard to implement.
-Therefore, we constraint our expression a little bit.
+Therefore, we constraint our expression a little bit to let only return boolean in the end.
 
 ```
-([parent("Vader", "Luke") male("Vader")] -> ((fresh x), "Luke"))
+([parent("Vader", "Luke") male("Vader")] -> father("Vader", "Luke"))
 ```
 
 The following is another example
@@ -121,9 +121,9 @@ The following is another example
 Rule parent : ([x y] -> ("parent" x y))
 Rule grandparent :  ([("parent" x y) ("parent" y z)] -> ("grandparent" x z))
 
-([parent("John", "Mose") parent("Mose", "Inca")] -> ((fresh x), (fresh z)))
+([parent("John", "Mose") parent("Mose", "Inca")] -> grandparent("Ada", "Inca")
 ```
 
-It should return (`x=John`, `z=Inca`)
+It should return false
 
 The whole implementation is at [PDL2.agda](./PDL2.agda)
