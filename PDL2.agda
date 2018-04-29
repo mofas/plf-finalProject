@@ -44,6 +44,7 @@ ruleParent = ((S "y") , ((S "x") , □)) ⊢ (Id "ruleParent") ∷ (P (Prop "par
 ruleMale : Rule
 ruleMale = ((S "x") , □) ⊢ (Id "ruleMale") ∷ (P (Prop "male") (Unary "x"))
 
+
 ruleFather : Rule
 ruleFather = ((P (Prop "male") (Unary "x")) , ((P (Prop "parent") (Binary "x" "y")) , □)) ⊢ (Id "ruleFather") ∷ (P (Prop "father") (Binary "x" "y"))
 
@@ -56,15 +57,24 @@ ctx1 : RuleCtx
 ctx1 = (ruleGrandparent , (ruleFather , (ruleMale , (ruleParent , □))))
 
 
-data Exp : Set
+data ParamSet : Set where
+  □   : ParamSet
+  _,_ : String → ParamSet → ParamSet
+  
+data Fact : Set where  
+  App      : ParamSet → RuleId → Fact
 
-data PremiseExp : Set where
-  □   : PremiseExp
-  _,_ : (String ⊎ Exp) → PremiseExp → PremiseExp
+data FactSet : Set where
+  □   : FactSet
+  _,_ : Fact → FactSet → FactSet
 
-data Exp where
-  App      : PremiseExp → RuleId → Exp
-  Check    : PremiseExp → Exp → Exp
+data Assumption : Set where
+   Asump   : Premise → Assumption 
+
+data Exp : Set where
+  Check    : FactSet → Assumption → Exp
+
+
 
 
 -- (
@@ -77,42 +87,56 @@ data Exp where
 -- )
 
 -- fact 1
-VaderIsLukeParent : Exp
-VaderIsLukeParent = (App (( inj₁ "Luke" , ( inj₁ "Vader" , □))) (Id "ruleParent"))
+VaderIsLukeParent : Fact
+VaderIsLukeParent = (App (("Luke" , ("Vader" , □))) (Id "ruleParent"))
 
 -- fact 2
-VaderIsMale : Exp
-VaderIsMale = (App (( inj₁ "Vader" , □)) (Id "ruleMale"))
+VaderIsMale : Fact
+VaderIsMale = (App (("Vader" , □)) (Id "ruleMale"))
 
 -- assumption
-VaderIsLukeFather : Exp
-VaderIsLukeFather = (App (( inj₁ "Luke" , ( inj₁ "Vader" , □))) (Id "ruleFather"))
+VaderIsLukeFather : Assumption
+VaderIsLukeFather = (Asump (P (Prop "father") (Binary "Vader" "Luke")))
 
 
 -- This expression is used to check the facts we have can infer our assumption 
 checkVaderIsLukeFather : Exp
-checkVaderIsLukeFather = (Check (inj₂ VaderIsLukeParent , (inj₂ VaderIsMale , □)) VaderIsLukeFather)
+checkVaderIsLukeFather = (Check (VaderIsLukeParent , (VaderIsMale , □)) VaderIsLukeFather)
 
 -- (
 --   [
 --     ["John", "Mose"] -> parent("John", "Mose")
 --     ["Mose", "Inca"] -> parent("Mose", "Inca")
 --   ]
---   ->
+--   ?-
 --   grandparent("Ada", "Inca")
 -- )
 
 
-JohnIsMoseParent : Exp
-JohnIsMoseParent = (App (( inj₁ "Mose" , ( inj₁ "John" , □))) (Id "ruleParent"))
+JohnIsMoseParent : Fact
+JohnIsMoseParent = (App (("Mose" , ("John" , □))) (Id "ruleParent"))
 
-MoseIsIncaParent : Exp
-MoseIsIncaParent = (App (( inj₁ "John" , ( inj₁ "Inca" , □))) (Id "ruleParent"))
+MoseIsIncaParent : Fact
+MoseIsIncaParent = (App (("John" , ("Inca" , □))) (Id "ruleParent"))
 
--- -- This one is not correct
--- JohnIsAdaGrandparent : Exp
--- JohnIsAdaGrandparent = (App (inj₂ MoseIsIncaParent , (inj₂ JohnIsMoseParent , □)) (Id "ruleGrandparent"))
+JohnIsAdaGrandparent : Assumption
+JohnIsAdaGrandparent = (Asump (P (Prop "grandparent") (Binary "John" "Ada")))
 
--- -- This one is correct
--- JohnIsIncaGrandparent : Exp
--- JohnIsIncaGrandparent = (App (inj₂ MoseIsIncaParent , (inj₂ JohnIsMoseParent , □)) (Id "ruleGrandparent")) 
+JohnIsIncaGrandparent : Assumption
+JohnIsIncaGrandparent = (Asump (P (Prop "grandparent") (Binary "John" "Inca")))
+
+-- This one is false 
+checkWithoutFact : Exp
+checkWithoutFact = (Check □ JohnIsAdaGrandparent)
+
+-- This one is false 
+checkJohnIsAdaGrandparent : Exp
+checkJohnIsAdaGrandparent = (Check (MoseIsIncaParent , (JohnIsMoseParent , □)) JohnIsAdaGrandparent)
+
+
+-- This one is true
+checkJohnIsIncaGrandparent : Exp
+checkJohnIsIncaGrandparent = (Check (MoseIsIncaParent , (JohnIsMoseParent , □)) JohnIsIncaGrandparent)
+
+
+-- EvalExp : Exp → RuleCtx → Bool

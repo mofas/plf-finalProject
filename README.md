@@ -117,7 +117,7 @@ Therefore, we constraint our expression a little bit to let only return boolean 
     ["Vader" "Luke"] -> parent("Vader", "Luke")
     ["Vader"] -> male("Vader")
   ]
-  ->
+  -?
   father("Vader", "Luke")
 )
 ```
@@ -133,7 +133,7 @@ Rule grandparent :  ([("parent" x y) ("parent" y z)] -> ("grandparent" x z))
     ["John", "Mose"] -> parent("John", "Mose")
     ["Mose", "Inca"] -> parent("Mose", "Inca")
   ]
-  ->
+  ?-
   grandparent("Ada", "Inca")
 )
 ```
