@@ -133,10 +133,42 @@ checkWithoutFact = (Check □ JohnIsAdaGrandparent)
 checkJohnIsAdaGrandparent : Exp
 checkJohnIsAdaGrandparent = (Check (MoseIsIncaParent , (JohnIsMoseParent , □)) JohnIsAdaGrandparent)
 
-
 -- This one is true
 checkJohnIsIncaGrandparent : Exp
 checkJohnIsIncaGrandparent = (Check (MoseIsIncaParent , (JohnIsMoseParent , □)) JohnIsIncaGrandparent)
 
 
--- EvalExp : Exp → RuleCtx → Bool
+
+data NotFind : Set where
+  none : NotFind
+
+-- PremiseSet → RuleId → Premise
+
+lookup : RuleCtx → Premise → (Rule ⊎ NotFind)
+lookup □ premise = inj₂ none
+lookup ((require ⊢ id ∷ S x) , ctx) (S y) = if x == y then inj₁ (require ⊢ id ∷ S x) else (lookup ctx (S y))
+lookup ((require ⊢ id ∷ P (Prop pr1) x) , ctx) (P (Prop pr2) y) =  if pr1 == pr2 then inj₁ (require ⊢ id ∷ P (Prop pr1) x) else (lookup ctx (P (Prop pr2) y)) 
+lookup (_ , ctx) target = lookup ctx target
+
+lookupEx1 : (Rule ⊎ NotFind)
+lookupEx1 = lookup ctx1 (P (Prop "female") (Unary "y"))
+
+lookupEx2 : (Rule ⊎ NotFind)
+lookupEx2 = lookup ctx1 (P (Prop "father") (Binary "Vader" "Luke"))
+
+lookupEx3 : (Rule ⊎ NotFind)
+lookupEx3 = lookup ctx1 (P (Prop "grandparent") (Binary "John" "Inca"))
+
+-- we simplify problem again, if we find our conclusion, which is a simple, can be derived from a rule, then return true directly.
+Derive : (Rule ⊎ NotFind) → Premise → Bool
+Derive (inj₂ none) premise = false
+Derive (inj₁ (premises ⊢ _ ∷ (S x))) (S y) = true 
+Derive (inj₁ (premises ⊢ _ ∷ (P pr1 re1))) (P pr2 re2) = {!!}
+Derive _ _ = false
+
+
+EvalExp : Exp → RuleCtx → Bool
+EvalExp (Check factSet (Asump premise)) ctx = 
+  let rule = (lookup ctx premise) in
+    Derive rule premise
+ 
