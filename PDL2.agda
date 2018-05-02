@@ -142,7 +142,6 @@ checkJohnIsIncaGrandparent = (Check (MoseIsIncaParent , (JohnIsMoseParent , □)
 data NotFind : Set where
   none : NotFind
 
--- PremiseSet → RuleId → Premise
 
 lookup : RuleCtx → Premise → (Rule ⊎ NotFind)
 lookup □ premise = inj₂ none
@@ -159,11 +158,42 @@ lookupEx2 = lookup ctx1 (P (Prop "father") (Binary "Vader" "Luke"))
 lookupEx3 : (Rule ⊎ NotFind)
 lookupEx3 = lookup ctx1 (P (Prop "grandparent") (Binary "John" "Inca"))
 
--- we simplify problem again, if we find our conclusion, which is a simple, can be derived from a rule, then return true directly.
+-- Quick check the relation fit with rule required
+_≡Re_ : Relation → Relation → Bool
+Unary x ≡Re Unary x₁ = true
+Unary x ≡Re Binary x₁ x₂ = false
+Binary x x₁ ≡Re Unary x₂ = false
+Binary x x₁ ≡Re Binary x₂ x₃ = true 
+
+-- data Relation : Set where
+--   Unary  : String → Relation
+--   Binary : String → String → Relation
+
+
+
+-- we replace the relation in
+-- Example: 
+-- for rule : ((P (Prop "male") (Unary "x")) , ((P (Prop "parent") (Binary "x" "y")) , □)) ⊢ (Id "ruleFather") ∷ (P (Prop "father") (Binary "x" "y"))
+-- assumption premise      : (Asump (P (Prop "father") (Binary "Vader" "Luke"))) 
+-- PremiseSet              : ((P (Prop "male") (Unary "x")) , ((P (Prop "parent") (Binary "x" "y")) , □))
+-- Relation in rule        : (P (Prop "father") (Binary "x" "y"))
+-- Relation in assumption  : (P (Prop "father") (Binary "Vader" "Luke"))
+-- We should get ((P (Prop "male") (Unary "Vader")) , ((P (Prop "parent") (Binary "Vader" "Luke")) , □)) in the end
+
+
+ReplaceRelation : PremiseSet → Relation → Relation → PremiseSet 
+ReplaceRelation = {!!}
+
+
+
+-- we simplify problem again, if we find our conclusion is a simple conclusion, and can be derived by a rule, then return true directly.
 Derive : (Rule ⊎ NotFind) → Premise → Bool
 Derive (inj₂ none) premise = false
-Derive (inj₁ (premises ⊢ _ ∷ (S x))) (S y) = true 
-Derive (inj₁ (premises ⊢ _ ∷ (P pr1 re1))) (P pr2 re2) = {!!}
+Derive (inj₁ (premises ⊢ _ ∷ (S x))) (S y) = true
+-- pr1 must equal to pr2 because we use it as key to lookup 
+Derive (inj₁ (premises ⊢ _ ∷ (P pr1 re1))) (P pr2 re2) with re1 ≡Re re2
+... | true =  let replaced = (ReplaceRelation premises re1 re2) in {!!}
+... | false = false
 Derive _ _ = false
 
 
