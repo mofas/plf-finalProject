@@ -74,6 +74,9 @@ data Assumption : Set where
 data Exp : Set where
   Check    : FactSet → Assumption → Exp
 
+data VarMapping : Set where
+  □   : VarMapping
+  _>_,_ : String → String → VarMapping → VarMapping
 
 
 
@@ -159,11 +162,11 @@ lookupEx3 : (Rule ⊎ NotFind)
 lookupEx3 = lookup ctx1 (P (Prop "grandparent") (Binary "John" "Inca"))
 
 -- Quick check the relation fit with rule required
-_≡Re_ : Relation → Relation → Bool
-Unary x ≡Re Unary x₁ = true
-Unary x ≡Re Binary x₁ x₂ = false
-Binary x x₁ ≡Re Unary x₂ = false
-Binary x x₁ ≡Re Binary x₂ x₃ = true 
+-- _≡Re_ : Relation → Relation → Bool
+-- Unary x ≡Re Unary x₁ = true
+-- Unary x ≡Re Binary x₁ x₂ = false
+-- Binary x x₁ ≡Re Unary x₂ = false
+-- Binary x x₁ ≡Re Binary x₂ x₃ = true 
 
 -- data Relation : Set where
 --   Unary  : String → Relation
@@ -180,9 +183,27 @@ Binary x x₁ ≡Re Binary x₂ x₃ = true
 -- Relation in assumption  : (P (Prop "father") (Binary "Vader" "Luke"))
 -- We should get ((P (Prop "male") (Unary "Vader")) , ((P (Prop "parent") (Binary "Vader" "Luke")) , □)) in the end
 
+ 
+GetVarMapping : Relation → Relation → VarMapping 
+GetVarMapping (Unary x) (Unary y) =  x > y , □
+GetVarMapping (Unary _) (Binary _ _) = □
+GetVarMapping (Binary _ _) (Unary _) = □
+GetVarMapping (Binary x₁ x₂) (Binary y₁ y₂) = ( x₂ > y₂ , (x₁ > y₁ , □))
 
-ReplaceRelation : PremiseSet → Relation → Relation → PremiseSet 
-ReplaceRelation = {!!}
+
+-- Eg: Map x > Vadar , y > Luke
+varMapping1 : VarMapping
+varMapping1 = GetVarMapping (Binary "x" "y") (Binary "Vader" "Luke")
+
+SubstituteVar : Premise → VarMapping → (Premise ⊎ NotFind)
+SubstituteVar = {!!}
+
+SubstitutePremiseSet : PremiseSet → VarMapping → (PremiseSet ⊎ NotFind)
+SubstitutePremiseSet □ _ = inj₁ □
+SubstitutePremiseSet (premise , set) map with (SubstituteVar premise map) | (SubstitutePremiseSet set map)
+... | inj₁ premise' | inj₁ set' = inj₁ (premise' , set')
+... | inj₂ x        | _         = inj₂ x
+... | _             | inj₂ x    = inj₂ x
 
 
 
@@ -190,10 +211,8 @@ ReplaceRelation = {!!}
 Derive : (Rule ⊎ NotFind) → Premise → Bool
 Derive (inj₂ none) premise = false
 Derive (inj₁ (premises ⊢ _ ∷ (S x))) (S y) = true
--- pr1 must equal to pr2 because we use it as key to lookup 
-Derive (inj₁ (premises ⊢ _ ∷ (P pr1 re1))) (P pr2 re2) with re1 ≡Re re2
-... | true =  let replaced = (ReplaceRelation premises re1 re2) in {!!}
-... | false = false
+
+Derive (inj₁ (premises ⊢ _ ∷ (P pr1 re1))) (P pr2 re2) = let varMap = (GetVarMapping re1 re2) in {!!}
 Derive _ _ = false
 
 
