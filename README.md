@@ -138,6 +138,29 @@ Rule grandparent :  ([("parent" x y) ("parent" y z)] -> ("grandparent" x z))
 )
 ```
 
-It should return false
+It should return false.
+
+For implementing such features, we will need more syntaxs.
+
+### New Syntax
+
+```
+data Relation : Set where
+  Unary  : String → Relation
+  Binary : String → String → Relation
+
+data Property : Set where
+  Prop : String → Property
+
+data Premise : Set where
+  S : String → Premise
+  P : Property → Relation → Premise  
+
+data PremiseSet : Set where
+  □   : PremiseSet
+  _,_ : Premise → PremiseSet → PremiseSet
+```
+
+Now we will need relation and property in premise. With such syntax, we can represent `([x y] -> ("parent" x y)` by saying this premise's property is `parent` and that a binary relation between `x` and `y`.
 
 The whole implementation is at [PDL2.agda](./PDL2.agda)

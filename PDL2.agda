@@ -194,33 +194,58 @@ SubstitutePremiseSet (premise , set) map with (SubstitutePremise premise map) | 
 ... | _             | inj₂ x    = inj₂ x
 
 
--- Example 
--- Map x > Vadar , y > Luke
-varMapping1 : VarMapping
-varMapping1 = GetVarMapping (Binary "x" "y") (Binary "Vader" "Luke")
-
--- we replace the relation in
--- Example: 
--- for rule : ((P (Prop "male") (Unary "x")) , ((P (Prop "parent") (Binary "x" "y")) , □)) ⊢ (Id "ruleFather") ∷ (P (Prop "father") (Binary "x" "y"))
--- assumption premise      : (Asump (P (Prop "father") (Binary "Vader" "Luke"))) 
--- PremiseSet              : ((P (Prop "male") (Unary "x")) , ((P (Prop "parent") (Binary "x" "y")) , □))
--- Relation in rule        : (P (Prop "father") (Binary "x" "y"))
--- Relation in assumption  : (P (Prop "father") (Binary "Vader" "Luke"))
--- We should get ((P (Prop "male") (Unary "Vader")) , ((P (Prop "parent") (Binary "Vader" "Luke")) , □)) in the end
+Derive : (Rule ⊎ NotFind) → Premise → (PremiseSet ⊎ NotFind)
+Derive (inj₂ none) premise = inj₂ none
+-- we simplify problem. If we find our conclusion is a simple conclusion, 
+-- then we just say nothing is required.
+Derive (inj₁ (premises ⊢ _ ∷ (S x))) (S y) = inj₁ □
+Derive (inj₁ (premises ⊢ _ ∷ (P pr1 re1))) (P pr2 re2) =
+  let map = (GetVarMapping re1 re2) in (SubstitutePremiseSet premises map)      
+Derive _ _ = inj₂ none
 
 
+isValidPremise : FactSet → Premise → Bool 
+isValidPremise □ p = false
+isValidPremise (App x x₁ , factSet) p = ?
 
--- we simplify problem again, if we find our conclusion is a simple conclusion, and can be derived by a rule, then return true directly.
-Derive : (Rule ⊎ NotFind) → Premise → Bool
-Derive (inj₂ none) premise = false
-Derive (inj₁ (premises ⊢ _ ∷ (S x))) (S y) = true
 
-Derive (inj₁ (premises ⊢ _ ∷ (P pr1 re1))) (P pr2 re2) = let varMap = (GetVarMapping re1 re2) in {!!}
-Derive _ _ = false
+CheckFact : FactSet → (PremiseSet ⊎ NotFind) → Bool
+CheckFact factSet (inj₁ □) = true
+CheckFact factSet (inj₁ (premise , set)) with isValidPremise factSet premise | CheckFact factSet (inj₁ set)
+... | true   |  true       = true
+... | _      | _           = false
+CheckFact _ _              = false
+
+
 
 
 EvalExp : Exp → RuleCtx → Bool
 EvalExp (Check factSet (Asump premise)) ctx = 
   let rule = (lookup ctx premise) in
-    Derive rule premise
+    let requirePremiseSet = (Derive rule premise) in
+      CheckFact factSet requirePremiseSet
  
+
+
+-- Example 
+-- Map x > Vadar , y > Luke
+varMapping1 : VarMapping
+varMapping1 = GetVarMapping (Binary "x" "y") (Binary "Vader" "Luke")
+
+
+-- We should get ((P (Prop "male") (Unary "Vader")) , ((P (Prop "parent") (Binary "Vader" "Luke")) , □))
+exSubPreSet : (PremiseSet ⊎ NotFind)
+exSubPreSet = SubstitutePremiseSet ((P (Prop "male") (Unary "x")) , ((P (Prop "parent") (Binary "x" "y")) , □)) varMapping1
+
+
+
+
+-- for rule : ((P (Prop "male") (Unary "x")) , ((P (Prop "parent") (Binary "x" "y")) , □)) ⊢ (Id "ruleFather") ∷ (P (Prop "father") (Binary "x" "y"))
+-- assumption premise      : (Asump (P (Prop "father") (Binary "Vader" "Luke"))) 
+-- PremiseSet              : ((P (Prop "male") (Unary "x")) , ((P (Prop "parent") (Binary "x" "y")) , □))
+-- Relation in rule        : (P (Prop "father") (Binary "x" "y"))
+-- Relation in assumption  : (P (Prop "father") (Binary "Vader" "Luke"))
+
+
+
+
