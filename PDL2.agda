@@ -179,12 +179,13 @@ Derive _ _ = inj₂ none
 CheckFact : Premise → Premise → Bool
 CheckFact = {!!} 
 
-isValidPremise : PremiseSet → Premise → Bool 
-isValidPremise □ p = false
-isValidPremise (fact , factSet) p = (CheckFact fact p) ∨ (isValidPremise factSet p)
+isValidPremise : (PremiseSet ⊎ NotFind) → Premise → Bool
+isValidPremise (inj₂ _) _ = false
+isValidPremise (inj₁ □) p = false
+isValidPremise (inj₁ (fact , factSet)) p = (CheckFact fact p) ∨ (isValidPremise (inj₁ factSet) p)
 
 
-CheckRequirePremiseSet : PremiseSet → (PremiseSet ⊎ NotFind) → Bool
+CheckRequirePremiseSet : (PremiseSet ⊎ NotFind) → (PremiseSet ⊎ NotFind) → Bool
 CheckRequirePremiseSet factSet (inj₁ □) = true
 CheckRequirePremiseSet factSet (inj₁ (premise , set)) with isValidPremise factSet premise | CheckRequirePremiseSet factSet (inj₁ set)
 ... | true   |  true       = true
@@ -192,15 +193,23 @@ CheckRequirePremiseSet factSet (inj₁ (premise , set)) with isValidPremise fact
 CheckRequirePremiseSet _ _ = false
 
 
-ApplyFactRule : FactSet → RuleCtx → PremiseSet 
+ApplyFactRule : Fact → RuleCtx → (Premise ⊎ NotFind)
 ApplyFactRule = {!!}
+
+
+ApplyFactSetRule : FactSet → RuleCtx → (PremiseSet ⊎ NotFind)
+ApplyFactSetRule factSet □ = inj₂ none
+ApplyFactSetRule □ _   =  inj₁ □
+ApplyFactSetRule (fact , factSet) ctx with (ApplyFactRule fact ctx) | (ApplyFactSetRule factSet ctx)
+... | inj₁ premise | inj₁ premiseSet = inj₁ (premise , premiseSet) 
+... | _            |  _              = inj₂ none
 
 
 EvalExp : Exp → RuleCtx → Bool
 EvalExp (Check factSet (Asump premise)) ctx = 
   let rule = (lookup ctx premise) in
     let requirePremiseSet = (Derive rule premise) in
-      CheckRequirePremiseSet (ApplyFactRule factSet ctx) requirePremiseSet
+      CheckRequirePremiseSet (ApplyFactSetRule factSet ctx) requirePremiseSet
  
 
 
