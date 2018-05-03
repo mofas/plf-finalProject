@@ -160,19 +160,44 @@ lookupEx2 = lookup ctx1 (P (Prop "father") (Binary "Vader" "Luke"))
 
 lookupEx3 : (Rule ⊎ NotFind)
 lookupEx3 = lookup ctx1 (P (Prop "grandparent") (Binary "John" "Inca"))
+ 
+GetVarMapping : Relation → Relation → VarMapping 
+GetVarMapping (Unary x) (Unary y) =  x > y , □
+GetVarMapping (Unary _) (Binary _ _) = □
+GetVarMapping (Binary _ _) (Unary _) = □
+GetVarMapping (Binary x₁ x₂) (Binary y₁ y₂) = ( x₂ > y₂ , (x₁ > y₁ , □))
 
--- Quick check the relation fit with rule required
--- _≡Re_ : Relation → Relation → Bool
--- Unary x ≡Re Unary x₁ = true
--- Unary x ≡Re Binary x₁ x₂ = false
--- Binary x x₁ ≡Re Unary x₂ = false
--- Binary x x₁ ≡Re Binary x₂ x₃ = true 
+SubstituteVariable : String → VarMapping → (String ⊎ NotFind)
+SubstituteVariable s □ = inj₂ none
+SubstituteVariable x (x' > y , map) = if x == x' then inj₁ y else SubstituteVariable x map
 
--- data Relation : Set where
---   Unary  : String → Relation
---   Binary : String → String → Relation
+SubstituteRelation : Relation → VarMapping → (Relation ⊎ NotFind)
+SubstituteRelation (Unary s) map with (SubstituteVariable s map)
+... | inj₁ y  = inj₁ (Unary y)
+... | inj₂ x  = inj₂ x
+SubstituteRelation (Binary s1 s2) map with (SubstituteVariable s1 map) | (SubstituteVariable s2 map)
+... | inj₁ y1 | inj₁ y2 = inj₁ (Binary y1 y2)
+... | _       | _    = inj₂ none
+
+SubstitutePremise : Premise → VarMapping → (Premise ⊎ NotFind)
+SubstitutePremise _ □ = inj₂ none
+SubstitutePremise (S x) (x' > y , map) = if x == x' then inj₁ (S y) else (SubstitutePremise (S x) map)
+SubstitutePremise (P prop relation) map with (SubstituteRelation relation map)
+... | inj₁ relation' = inj₁ (P prop relation')
+... | inj₂ x         = inj₂ x
+
+SubstitutePremiseSet : PremiseSet → VarMapping → (PremiseSet ⊎ NotFind)
+SubstitutePremiseSet □ _ = inj₁ □
+SubstitutePremiseSet (premise , set) map with (SubstitutePremise premise map) | (SubstitutePremiseSet set map)
+... | inj₁ premise' | inj₁ set' = inj₁ (premise' , set')
+... | inj₂ x        | _         = inj₂ x
+... | _             | inj₂ x    = inj₂ x
 
 
+-- Example 
+-- Map x > Vadar , y > Luke
+varMapping1 : VarMapping
+varMapping1 = GetVarMapping (Binary "x" "y") (Binary "Vader" "Luke")
 
 -- we replace the relation in
 -- Example: 
@@ -182,28 +207,6 @@ lookupEx3 = lookup ctx1 (P (Prop "grandparent") (Binary "John" "Inca"))
 -- Relation in rule        : (P (Prop "father") (Binary "x" "y"))
 -- Relation in assumption  : (P (Prop "father") (Binary "Vader" "Luke"))
 -- We should get ((P (Prop "male") (Unary "Vader")) , ((P (Prop "parent") (Binary "Vader" "Luke")) , □)) in the end
-
- 
-GetVarMapping : Relation → Relation → VarMapping 
-GetVarMapping (Unary x) (Unary y) =  x > y , □
-GetVarMapping (Unary _) (Binary _ _) = □
-GetVarMapping (Binary _ _) (Unary _) = □
-GetVarMapping (Binary x₁ x₂) (Binary y₁ y₂) = ( x₂ > y₂ , (x₁ > y₁ , □))
-
-
--- Eg: Map x > Vadar , y > Luke
-varMapping1 : VarMapping
-varMapping1 = GetVarMapping (Binary "x" "y") (Binary "Vader" "Luke")
-
-SubstituteVar : Premise → VarMapping → (Premise ⊎ NotFind)
-SubstituteVar = {!!}
-
-SubstitutePremiseSet : PremiseSet → VarMapping → (PremiseSet ⊎ NotFind)
-SubstitutePremiseSet □ _ = inj₁ □
-SubstitutePremiseSet (premise , set) map with (SubstituteVar premise map) | (SubstitutePremiseSet set map)
-... | inj₁ premise' | inj₁ set' = inj₁ (premise' , set')
-... | inj₂ x        | _         = inj₂ x
-... | _             | inj₂ x    = inj₂ x
 
 
 
