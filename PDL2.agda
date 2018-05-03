@@ -58,70 +58,6 @@ data VarMapping : Set where
   □   : VarMapping
   _>_,_ : String → String → VarMapping → VarMapping
 
-
-
--- (
---   [
---     ["Vader" "Luke"] -> parent("Vader", "Luke")
---     ["Vader"] -> male("Vader")
---   ]
---   ?-
---   father("Vader", "Luke")
--- )
-
--- fact 1
-VaderIsLukeParent : Fact
-VaderIsLukeParent = (App (("Luke" , ("Vader" , □))) (Id "ruleParent"))
-
--- fact 2
-VaderIsMale : Fact
-VaderIsMale = (App (("Vader" , □)) (Id "ruleMale"))
-
--- assumption
-VaderIsLukeFather : Assumption
-VaderIsLukeFather = (Asump (P (Prop "father") (Binary "Vader" "Luke")))
-
-
--- This expression is used to check the facts we have can infer our assumption 
-checkVaderIsLukeFather : Exp
-checkVaderIsLukeFather = (Check (VaderIsLukeParent , (VaderIsMale , □)) VaderIsLukeFather)
-
--- (
---   [
---     ["John", "Mose"] -> parent("John", "Mose")
---     ["Mose", "Inca"] -> parent("Mose", "Inca")
---   ]
---   ?-
---   grandparent("Ada", "Inca")
--- )
-
-
-JohnIsMoseParent : Fact
-JohnIsMoseParent = (App (("Mose" , ("John" , □))) (Id "ruleParent"))
-
-MoseIsIncaParent : Fact
-MoseIsIncaParent = (App (("John" , ("Inca" , □))) (Id "ruleParent"))
-
-JohnIsAdaGrandparent : Assumption
-JohnIsAdaGrandparent = (Asump (P (Prop "grandparent") (Binary "John" "Ada")))
-
-JohnIsIncaGrandparent : Assumption
-JohnIsIncaGrandparent = (Asump (P (Prop "grandparent") (Binary "John" "Inca")))
-
--- This one is false 
-checkWithoutFact : Exp
-checkWithoutFact = (Check □ JohnIsAdaGrandparent)
-
--- This one is false 
-checkJohnIsAdaGrandparent : Exp
-checkJohnIsAdaGrandparent = (Check (MoseIsIncaParent , (JohnIsMoseParent , □)) JohnIsAdaGrandparent)
-
--- This one is true
-checkJohnIsIncaGrandparent : Exp
-checkJohnIsIncaGrandparent = (Check (MoseIsIncaParent , (JohnIsMoseParent , □)) JohnIsIncaGrandparent)
-
-
-
 data NotFind : Set where
   none : NotFind
 
@@ -174,10 +110,16 @@ Derive (inj₁ (premises ⊢ _ ∷ (P pr1 re1))) (P pr2 re2) =
   let map = (GetVarMapping re1 re2) in (SubstitutePremiseSet premises map)      
 Derive _ _ = inj₂ none
 
+_≡Re_ : Relation → Relation → Bool
+Unary x ≡Re Unary y =  if x == y then true else false
+Binary x1 y1 ≡Re Binary x2 y2 = if (x1 == x2) ∧ (y1 == y2) then true else false  
+_ ≡Re _ = false
 
 -- the first premise is from fact, the second is from assumption 
 CheckFact : Premise → Premise → Bool
-CheckFact = {!!} 
+CheckFact (S x) (S y) = if x == y then true else false
+CheckFact (P (Prop p1) re1) (P (Prop p2) re2) = if (p1 == p2) ∧ (re1 ≡Re re2) then true else false 
+CheckFact _ _ = false
 
 isValidPremise : (PremiseSet ⊎ NotFind) → Premise → Bool
 isValidPremise (inj₂ _) _ = false
@@ -193,8 +135,25 @@ CheckRequirePremiseSet factSet (inj₁ (premise , set)) with isValidPremise fact
 CheckRequirePremiseSet _ _ = false
 
 
+InstantiateRelation : ParamSet → Relation → (Relation ⊎ NotFind)
+InstantiateRelation (x , param) (Unary _) = inj₁ (Unary x)
+InstantiateRelation (x , (y , param)) (Binary _ _) = inj₁ (Binary y x) 
+InstantiateRelation _ _ = inj₂ none
+
+
+-- ParamSet : (("Luke" , ("Vader" , □)))
+-- (P (Prop "parent") (Binary "x" "y"))
+InstantiateFact : ParamSet → Premise → (Premise ⊎ NotFind)
+InstantiateFact □ _ = inj₂ none
+InstantiateFact (x , param) (S _) = inj₁ (S x)
+InstantiateFact param (P prop relation) with (InstantiateRelation param relation)
+... | inj₁ relation' = inj₁ (P prop relation')
+... | _ = inj₂ none
+
+
 ApplyFactRule : Fact → RuleCtx → (Premise ⊎ NotFind)
-ApplyFactRule = {!!}
+ApplyFactRule (App x x₁) □ = inj₂ none
+ApplyFactRule (App param (Id id)) ((require ⊢ (Id id') ∷ conclusion) , ctx) = if id == id' then (InstantiateFact param conclusion) else (ApplyFactRule (App param (Id id)) ctx)
 
 
 ApplyFactSetRule : FactSet → RuleCtx → (PremiseSet ⊎ NotFind)
@@ -249,19 +208,102 @@ varMapping1 : VarMapping
 varMapping1 = GetVarMapping (Binary "x" "y") (Binary "Vader" "Luke")
 
 
--- We should get ((P (Prop "male") (Unary "Vader")) , ((P (Prop "parent") (Binary "Vader" "Luke")) , □))
+-- ((P (Prop "male") (Unary "Vader")) , ((P (Prop "parent") (Binary "Vader" "Luke")) , □))
 exSubPreSet : (PremiseSet ⊎ NotFind)
 exSubPreSet = SubstitutePremiseSet ((P (Prop "male") (Unary "x")) , ((P (Prop "parent") (Binary "x" "y")) , □)) varMapping1
 
 
 
+-- (
+--   [
+--     ["Vader" "Luke"] -> parent("Vader", "Luke")
+--     ["Vader"] -> male("Vader")
+--   ]
+--   ?-
+--   father("Vader", "Luke")
+-- )
 
--- for rule : ((P (Prop "male") (Unary "x")) , ((P (Prop "parent") (Binary "x" "y")) , □)) ⊢ (Id "ruleFather") ∷ (P (Prop "father") (Binary "x" "y"))
--- assumption premise      : (Asump (P (Prop "father") (Binary "Vader" "Luke"))) 
--- PremiseSet              : ((P (Prop "male") (Unary "x")) , ((P (Prop "parent") (Binary "x" "y")) , □))
--- Relation in rule        : (P (Prop "father") (Binary "x" "y"))
--- Relation in assumption  : (P (Prop "father") (Binary "Vader" "Luke"))
+-- fact 1
+VaderIsLukeParent : Fact
+VaderIsLukeParent = (App (("Luke" , ("Vader" , □))) (Id "ruleParent"))
 
+-- fact 2
+VaderIsMale : Fact
+VaderIsMale = (App (("Vader" , □)) (Id "ruleMale"))
+
+-- assumption
+VaderIsLukeFather : Assumption
+VaderIsLukeFather = (Asump (P (Prop "father") (Binary "Vader" "Luke")))
+
+
+-- This expression is used to check the facts we have can infer our assumption 
+checkVaderIsLukeFather : Exp
+checkVaderIsLukeFather = (Check (VaderIsLukeParent , (VaderIsMale , □)) VaderIsLukeFather)
+
+
+-- InstantiateFact 
+instEx1 : (Relation ⊎ NotFind)
+instEx1 = InstantiateRelation (("Luke" , ("Vader" , □))) (Binary "x" "y")
+
+-- instinate fact inj₁ (P (Prop "parent") (Binary "Vader" "Luke"))
+applyRule1 : (Premise ⊎ NotFind)
+applyRule1 = ApplyFactRule VaderIsLukeParent ctx1
+
+-- instinate fact (P (Prop "male") (Unary "Vader"))
+applyRule2 : (Premise ⊎ NotFind)
+applyRule2 = ApplyFactRule VaderIsMale ctx1
+
+
+-- inj₁ (P (Prop "parent") (Binary "Vader" "Luke") , (P (Prop "male") (Unary "Vader") , □))
+applyRuleSet1 : (PremiseSet ⊎ NotFind)
+applyRuleSet1 = (ApplyFactSetRule (VaderIsLukeParent , (VaderIsMale , □)) ctx1)
+
+
+-- true!
+result1 : Bool
+result1 = EvalExp checkVaderIsLukeFather ctx1
+
+
+
+
+-- (
+--   [
+--     ["John", "Mose"] -> parent("John", "Mose")
+--     ["Mose", "Inca"] -> parent("Mose", "Inca")
+--   ]
+--   ?-
+--   grandparent("Ada", "Inca")
+-- )
+
+
+JohnIsMoseParent : Fact
+JohnIsMoseParent = (App (("Mose" , ("John" , □))) (Id "ruleParent"))
+
+MoseIsIncaParent : Fact
+MoseIsIncaParent = (App (("John" , ("Inca" , □))) (Id "ruleParent"))
+
+JohnIsAdaGrandparent : Assumption
+JohnIsAdaGrandparent = (Asump (P (Prop "grandparent") (Binary "John" "Ada")))
+
+JohnIsIncaGrandparent : Assumption
+JohnIsIncaGrandparent = (Asump (P (Prop "grandparent") (Binary "John" "Inca")))
+
+
+
+-- This one is false 
+checkWithoutFact : Exp
+checkWithoutFact = (Check □ JohnIsAdaGrandparent)
+
+-- This one is false 
+checkJohnIsAdaGrandparent : Exp
+checkJohnIsAdaGrandparent = (Check (MoseIsIncaParent , (JohnIsMoseParent , □)) JohnIsAdaGrandparent)
+
+-- This one is true
+checkJohnIsIncaGrandparent : Exp
+checkJohnIsIncaGrandparent = (Check (MoseIsIncaParent , (JohnIsMoseParent , □)) JohnIsIncaGrandparent)
+
+-- I find this part we still need the unification to solve it ...
+-- TODO ...
 
 
 
