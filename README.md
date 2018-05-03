@@ -163,4 +163,33 @@ data PremiseSet : Set where
 
 Now we will need relation and property in premise. With such syntax, we can represent `([x y] -> ("parent" x y)` by saying this premise's property is `parent` and that a binary relation between `x` and `y`.
 
+In addition, in order to write fact and assumption. We will need the following syntax
+
+```
+data ParamSet : Set where
+  □   : ParamSet
+  _,_ : String → ParamSet → ParamSet
+
+data Fact : Set where  
+  App      : ParamSet → RuleId → Fact
+
+data FactSet : Set where
+  □   : FactSet
+  _,_ : Fact → FactSet → FactSet
+
+data Assumption : Set where
+   Asump   : Premise → Assumption
+
+data Exp : Set where
+  Check    : FactSet → Assumption → Exp
+```
+
+### Check Mechanism
+
+For this implementation, We can only do the shallow check. That is, we will find the rule that can generate the assumption, and instantiate the required premise by assumptions. Finally, we check if all instantiated premises are qualified by facts provided.
+
+### Limitation
+
+We don't do the recursively check and unification check here because they will cause non-terminating problem in Agda.
+
 The whole implementation is at [PDL2.agda](./PDL2.agda)

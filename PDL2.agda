@@ -61,6 +61,7 @@ data VarMapping : Set where
 data NotFind : Set where
   none : NotFind
 
+-- Check Mechanism
 
 lookup : RuleCtx → Premise → (Rule ⊎ NotFind)
 lookup □ premise = inj₂ none
@@ -174,6 +175,7 @@ EvalExp (Check factSet (Asump premise)) ctx =
 
 -- Example
 
+-- Rule
 ruleParent : Rule
 ruleParent = ((S "y") , ((S "x") , □)) ⊢ (Id "ruleParent") ∷ (P (Prop "parent") (Binary "x" "y"))
 
@@ -188,32 +190,6 @@ ruleGrandparent : Rule
 ruleGrandparent = ((P (Prop "parent") (Binary "y" "z")) , ((P (Prop "parent") (Binary "x" "y")) , □)) ⊢ (Id "ruleGrandparent") ∷ (P (Prop "grandparent") (Binary "x" "z"))
 
 
--- Example: ruleCtx
-ctx1 : RuleCtx 
-ctx1 = (ruleGrandparent , (ruleFather , (ruleMale , (ruleParent , □))))
-
-
-lookupEx1 : (Rule ⊎ NotFind)
-lookupEx1 = lookup ctx1 (P (Prop "female") (Unary "y"))
-
-lookupEx2 : (Rule ⊎ NotFind)
-lookupEx2 = lookup ctx1 (P (Prop "father") (Binary "Vader" "Luke"))
-
-lookupEx3 : (Rule ⊎ NotFind)
-lookupEx3 = lookup ctx1 (P (Prop "grandparent") (Binary "John" "Inca"))
- 
-
--- Map x > Vadar , y > Luke
-varMapping1 : VarMapping
-varMapping1 = GetVarMapping (Binary "x" "y") (Binary "Vader" "Luke")
-
-
--- ((P (Prop "male") (Unary "Vader")) , ((P (Prop "parent") (Binary "Vader" "Luke")) , □))
-exSubPreSet : (PremiseSet ⊎ NotFind)
-exSubPreSet = SubstitutePremiseSet ((P (Prop "male") (Unary "x")) , ((P (Prop "parent") (Binary "x" "y")) , □)) varMapping1
-
-
-
 -- (
 --   [
 --     ["Vader" "Luke"] -> parent("Vader", "Luke")
@@ -222,6 +198,31 @@ exSubPreSet = SubstitutePremiseSet ((P (Prop "male") (Unary "x")) , ((P (Prop "p
 --   ?-
 --   father("Vader", "Luke")
 -- )
+
+
+-- RuleCtx
+ctx1 : RuleCtx 
+ctx1 = (ruleGrandparent , (ruleFather , (ruleMale , (ruleParent , □))))
+
+-- Lookup Rule by Prop
+lookupEx1 : (Rule ⊎ NotFind)
+lookupEx1 = lookup ctx1 (P (Prop "female") (Unary "y"))
+
+lookupEx2 : (Rule ⊎ NotFind)
+lookupEx2 = lookup ctx1 (P (Prop "father") (Binary "Vader" "Luke"))
+
+lookupEx3 : (Rule ⊎ NotFind)
+lookupEx3 = lookup ctx1 (P (Prop "grandparent") (Binary "John" "Inca"))
+
+-- Create var mapping
+-- Map x > Vadar , y > Luke
+varMapping1 : VarMapping
+varMapping1 = GetVarMapping (Binary "x" "y") (Binary "Vader" "Luke")
+
+
+-- ((P (Prop "male") (Unary "Vader")) , ((P (Prop "parent") (Binary "Vader" "Luke")) , □))
+exSubPreSet : (PremiseSet ⊎ NotFind)
+exSubPreSet = SubstitutePremiseSet ((P (Prop "male") (Unary "x")) , ((P (Prop "parent") (Binary "x" "y")) , □)) varMapping1
 
 -- fact 1
 VaderIsLukeParent : Fact
@@ -236,7 +237,7 @@ VaderIsLukeFather : Assumption
 VaderIsLukeFather = (Asump (P (Prop "father") (Binary "Vader" "Luke")))
 
 
--- This expression is used to check the facts we have can infer our assumption 
+-- This expression is used to check whether the facts we provided can infer the assumption 
 checkVaderIsLukeFather : Exp
 checkVaderIsLukeFather = (Check (VaderIsLukeParent , (VaderIsMale , □)) VaderIsLukeFather)
 
@@ -259,11 +260,24 @@ applyRuleSet1 : (PremiseSet ⊎ NotFind)
 applyRuleSet1 = (ApplyFactSetRule (VaderIsLukeParent , (VaderIsMale , □)) ctx1)
 
 
+--
+-- Eval Example
+--
+
+
 -- true!
 result1 : Bool
 result1 = EvalExp checkVaderIsLukeFather ctx1
 
 
+-- If we don't give enough facts, then it will become false
+result2 : Bool
+result2 = EvalExp (Check (VaderIsLukeParent , □) (Asump (P (Prop "father") (Binary "Vader" "Luke")))) ctx1
+
+
+-- How about say "Yoda is the father of Luke", the answer is false
+result3 : Bool
+result3 = EvalExp (Check (VaderIsLukeParent , (VaderIsMale , □)) (Asump (P (Prop "father") (Binary "Yoda" "Luke")))) ctx1
 
 
 -- (
@@ -287,7 +301,6 @@ JohnIsAdaGrandparent = (Asump (P (Prop "grandparent") (Binary "John" "Ada")))
 
 JohnIsIncaGrandparent : Assumption
 JohnIsIncaGrandparent = (Asump (P (Prop "grandparent") (Binary "John" "Inca")))
-
 
 
 -- This one is false 
