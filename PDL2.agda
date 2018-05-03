@@ -6,7 +6,7 @@ open import Data.Nat
 open import Data.String
 open import Data.Sum
 open import Data.List hiding (_++_; drop)
-open import Data.Bool.Base using (Bool; false; true; _∧_; if_then_else_)
+open import Data.Bool.Base using (Bool; false; true; _∧_; _∨_; if_then_else_)
 open import Relation.Nullary
 open import Relation.Nullary.Decidable
 
@@ -36,26 +36,6 @@ data Rule : Set where
 data RuleCtx : Set where
   □ : RuleCtx
   _,_ : Rule → RuleCtx → RuleCtx
-
-
-ruleParent : Rule
-ruleParent = ((S "y") , ((S "x") , □)) ⊢ (Id "ruleParent") ∷ (P (Prop "parent") (Binary "x" "y"))
-
-ruleMale : Rule
-ruleMale = ((S "x") , □) ⊢ (Id "ruleMale") ∷ (P (Prop "male") (Unary "x"))
-
-
-ruleFather : Rule
-ruleFather = ((P (Prop "male") (Unary "x")) , ((P (Prop "parent") (Binary "x" "y")) , □)) ⊢ (Id "ruleFather") ∷ (P (Prop "father") (Binary "x" "y"))
-
-ruleGrandparent : Rule
-ruleGrandparent = ((P (Prop "parent") (Binary "y" "z")) , ((P (Prop "parent") (Binary "x" "y")) , □)) ⊢ (Id "ruleGrandparent") ∷ (P (Prop "grandparent") (Binary "x" "z"))
-
-
--- Example: ruleCtx
-ctx1 : RuleCtx 
-ctx1 = (ruleGrandparent , (ruleFather , (ruleMale , (ruleParent , □))))
-
 
 data ParamSet : Set where
   □   : ParamSet
@@ -152,15 +132,6 @@ lookup ((require ⊢ id ∷ S x) , ctx) (S y) = if x == y then inj₁ (require �
 lookup ((require ⊢ id ∷ P (Prop pr1) x) , ctx) (P (Prop pr2) y) =  if pr1 == pr2 then inj₁ (require ⊢ id ∷ P (Prop pr1) x) else (lookup ctx (P (Prop pr2) y)) 
 lookup (_ , ctx) target = lookup ctx target
 
-lookupEx1 : (Rule ⊎ NotFind)
-lookupEx1 = lookup ctx1 (P (Prop "female") (Unary "y"))
-
-lookupEx2 : (Rule ⊎ NotFind)
-lookupEx2 = lookup ctx1 (P (Prop "father") (Binary "Vader" "Luke"))
-
-lookupEx3 : (Rule ⊎ NotFind)
-lookupEx3 = lookup ctx1 (P (Prop "grandparent") (Binary "John" "Inca"))
- 
 GetVarMapping : Relation → Relation → VarMapping 
 GetVarMapping (Unary x) (Unary y) =  x > y , □
 GetVarMapping (Unary _) (Binary _ _) = □
@@ -204,30 +175,66 @@ Derive (inj₁ (premises ⊢ _ ∷ (P pr1 re1))) (P pr2 re2) =
 Derive _ _ = inj₂ none
 
 
-isValidPremise : FactSet → Premise → Bool 
+-- the first premise is from fact, the second is from assumption 
+CheckFact : Premise → Premise → Bool
+CheckFact = {!!} 
+
+isValidPremise : PremiseSet → Premise → Bool 
 isValidPremise □ p = false
-isValidPremise (App x x₁ , factSet) p = ?
+isValidPremise (fact , factSet) p = (CheckFact fact p) ∨ (isValidPremise factSet p)
 
 
-CheckFact : FactSet → (PremiseSet ⊎ NotFind) → Bool
-CheckFact factSet (inj₁ □) = true
-CheckFact factSet (inj₁ (premise , set)) with isValidPremise factSet premise | CheckFact factSet (inj₁ set)
+CheckRequirePremiseSet : PremiseSet → (PremiseSet ⊎ NotFind) → Bool
+CheckRequirePremiseSet factSet (inj₁ □) = true
+CheckRequirePremiseSet factSet (inj₁ (premise , set)) with isValidPremise factSet premise | CheckRequirePremiseSet factSet (inj₁ set)
 ... | true   |  true       = true
 ... | _      | _           = false
-CheckFact _ _              = false
+CheckRequirePremiseSet _ _ = false
 
 
+ApplyFactRule : FactSet → RuleCtx → PremiseSet 
+ApplyFactRule = {!!}
 
 
 EvalExp : Exp → RuleCtx → Bool
 EvalExp (Check factSet (Asump premise)) ctx = 
   let rule = (lookup ctx premise) in
     let requirePremiseSet = (Derive rule premise) in
-      CheckFact factSet requirePremiseSet
+      CheckRequirePremiseSet (ApplyFactRule factSet ctx) requirePremiseSet
  
 
 
--- Example 
+-- Example
+
+ruleParent : Rule
+ruleParent = ((S "y") , ((S "x") , □)) ⊢ (Id "ruleParent") ∷ (P (Prop "parent") (Binary "x" "y"))
+
+ruleMale : Rule
+ruleMale = ((S "x") , □) ⊢ (Id "ruleMale") ∷ (P (Prop "male") (Unary "x"))
+
+
+ruleFather : Rule
+ruleFather = ((P (Prop "male") (Unary "x")) , ((P (Prop "parent") (Binary "x" "y")) , □)) ⊢ (Id "ruleFather") ∷ (P (Prop "father") (Binary "x" "y"))
+
+ruleGrandparent : Rule
+ruleGrandparent = ((P (Prop "parent") (Binary "y" "z")) , ((P (Prop "parent") (Binary "x" "y")) , □)) ⊢ (Id "ruleGrandparent") ∷ (P (Prop "grandparent") (Binary "x" "z"))
+
+
+-- Example: ruleCtx
+ctx1 : RuleCtx 
+ctx1 = (ruleGrandparent , (ruleFather , (ruleMale , (ruleParent , □))))
+
+
+lookupEx1 : (Rule ⊎ NotFind)
+lookupEx1 = lookup ctx1 (P (Prop "female") (Unary "y"))
+
+lookupEx2 : (Rule ⊎ NotFind)
+lookupEx2 = lookup ctx1 (P (Prop "father") (Binary "Vader" "Luke"))
+
+lookupEx3 : (Rule ⊎ NotFind)
+lookupEx3 = lookup ctx1 (P (Prop "grandparent") (Binary "John" "Inca"))
+ 
+
 -- Map x > Vadar , y > Luke
 varMapping1 : VarMapping
 varMapping1 = GetVarMapping (Binary "x" "y") (Binary "Vader" "Luke")
